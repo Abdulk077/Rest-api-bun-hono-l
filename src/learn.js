@@ -33,5 +33,42 @@ app.get("/videos", (c) => {
     await stream.end();
   });
 });
-// Read
+// Read by video id 
+app.get("/video/:id", (c) => {
+  const { id } = c.req.param();
+  const video = Videos.find((video) => video.id === id);
+  if (!video) {
+    return c.json({ error: "Video not found" }, 404);
+  }
+  return c.json(video);
+});
+// for update the video details 
+app.put("/video/:id", async (c) => {
+  const { id } = c.req.param();
+  const { videoname, cahnnelname, duration } = await c.req.json();
+  const videoIndex = Videos.findIndex((video) => video.id === id);
+  if (videoIndex === -1) {
+    return c.json({ error: "Video not found" }, 404);
+  }
+  const updatedVideo = {
+    id,
+    videoname,
+    cahnnelname,
+    duration,
+  };
+  Videos[videoIndex] = updatedVideo;
+  return c.json(updatedVideo);
+});
+// for delete the video
+app.delete("/video/:id", (c) => {
+  const { id } = c.req.param();
+  Videos = Videos.filter((video) => video.id !== id);
+  return c.json({ message: "Video deleted successfully" });
+});
+// Delete all videos
+app.delete("/videos", (c) => {
+  Videos = []
+  return c.json({ message: "All videos deleted successfully" });
+});
+
 export default app;
