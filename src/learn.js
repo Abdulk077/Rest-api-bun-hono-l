@@ -121,12 +121,43 @@ app.get("/stream-video", async (c) => {
   if (!file) {
     return c.text("Video not found", 404);
   }
+  // defining range header for the video streaming
+  
+  const filesize = await file.size;
+  const rangeHeader = c.req.header("Range");
+  // if don't have range header then we will send the whole video to the client
+  if(!rangeHeader) {
+    c.header('Content-Type', 'video/mp4');
+    c.header('Content-Length', filesize.toString());
+    c.header('Accept-Ranges', 'bytes');
+    return stream(c, async (stream) => {
+      await stream.pipe(file.stream());
+    });
+
+  }
+  // Parsing Header Range:start-end
+  const [startStr, endStr] = rangeHeader.replace('bytes=','').split("-");
+  const start = parseInt(startStr, 10);
+  const end = endStr ? parseInt(endStr, 10) : filesize - 1;
+  const chunkSize = (end - start) + 1;
+
+  // valiadting range
+  if (start >= filesize || end >= filesize) {
+    c.header("Content-Range", `bytes */${filesize}`);
+    return c.text("Range Not Satisfiable", 416);
+  }
+  c.header('Content-Type', 'video/mp4');
+  c.header('Content-Range', `bytes ${start}-${end}/${filesize}`);
+
+
   c.header("Content-Type", "video/mp4"); 
   c.header("Content-Length", file.size.toString());
-  
+  c.header("Accept-Ranges", "bytes");
+  c.header("Content-Range", String(chunkSize));
 
   return stream(c, async (stream) => {
     // fetching the video from the local device
+    const chunk = file.slice(start, end + 1);
     await stream.pipe(file.stream());
 
   });
