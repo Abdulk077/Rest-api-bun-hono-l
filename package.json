@@ -4,7 +4,9 @@
     "dev": "bun run --hot src/learn.js"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
     "hono": "^4.12.7",
+    "mongoose": "^9.3.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

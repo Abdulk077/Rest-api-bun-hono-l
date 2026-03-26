@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { v4 as uuidv4 } from "uuid";
 import { stream, streamText, streamSSE } from "hono/streaming";
 const app = new Hono();
-const Videos = [];
+//const Videos = [];
 
 app.get("/", (c) => {
   return c.text("Hello, World!");
@@ -33,7 +33,7 @@ app.get("/videos", (c) => {
     await stream.end();
   });
 });
-// Read by video id 
+// Read by video id
 app.get("/video/:id", (c) => {
   const { id } = c.req.param();
   const video = Videos.find((video) => video.id === id);
@@ -42,7 +42,7 @@ app.get("/video/:id", (c) => {
   }
   return c.json(video);
 });
-// for update the video details 
+// for update the video details
 app.put("/video/:id", async (c) => {
   const { id } = c.req.param();
   const { videoname, cahnnelname, duration } = await c.req.json();
@@ -67,8 +67,19 @@ app.delete("/video/:id", (c) => {
 });
 // Delete all videos
 app.delete("/videos", (c) => {
-  Videos = []
+  Videos = [];
   return c.json({ message: "All videos deleted successfully" });
 });
-
+// streaming a image
+app.get("/stream-image", (c) => {
+  c.header("Content-Type", "image/jpg");
+  return stream(c, async (stream) => {
+    // fetcing the image from the url
+    const response = await fetch(
+      "https://media.gettyimages.com/id/1475043801/photo/choice-variation-concept.jpg?s=612x612&w=0&k=20&c=zZJfHTFo6764SW6uVaLmLWhxb9AoFRFj35bLdo6aql0=",
+    );
+    // streaming the image data to the client
+    await stream.pipe(response.body);
+  });
+});
 export default app;
