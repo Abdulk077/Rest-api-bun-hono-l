@@ -1,3 +1,9 @@
 # deps
 node_modules/
 *.mp4
+*.mkv
+*.webm
+*.avi
+*.mov
+*.ts
+*.m3u8

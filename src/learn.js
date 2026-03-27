@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { stream } from "hono/streaming";
 import { join } from "node:path";
 import {logger} from "hono/logger";
+//import {extname} from 'path';
 const app = new Hono();
 //const Videos = [];
 // using logger middleware
@@ -15,7 +16,7 @@ app.get("/uuid", (c) => {
   const uuid = uuidv4();
   return c.text(`Generated UUID: ${uuid}`);
 });
-app.post("/video", async (c) => {
+app.post("/videosss", async (c) => {
   const { videoname, cahnnelname, duration } = await c.req.json();
   const videoId = uuidv4();
   const newVideo = {
@@ -37,7 +38,7 @@ app.get("/videos", (c) => {
   });
 });
 // Read by video id
-app.get("/video/:id", (c) => {
+app.get("/videosss/:id", (c) => {
   const { id } = c.req.param();
   const video = Videos.find((video) => video.id === id);
   if (!video) {
@@ -46,7 +47,7 @@ app.get("/video/:id", (c) => {
   return c.json(video);
 });
 // for update the video details
-app.put("/video/:id", async (c) => {
+app.put("/videosss/:id", async (c) => {
   const { id } = c.req.param();
   const { videoname, cahnnelname, duration } = await c.req.json();
   const videoIndex = Videos.findIndex((video) => video.id === id);
@@ -63,13 +64,13 @@ app.put("/video/:id", async (c) => {
   return c.json(updatedVideo);
 });
 // for delete the video
-app.delete("/video/:id", (c) => {
+app.delete("/videosss/:id", (c) => {
   const { id } = c.req.param();
   Videos = Videos.filter((video) => video.id !== id);
   return c.json({ message: "Video deleted successfully" });
 });
 // Delete all videos
-app.delete("/videos", (c) => {
+app.delete("/videosss", (c) => {
   Videos = [];
   return c.json({ message: "All videos deleted successfully" });
 });
@@ -114,54 +115,108 @@ app.get("/streams-image", async (c) => {
 // video streaming using stream pipe from local device
 const videoPath = join(import.meta.dir, "video.mp4");
 app.get("/stream-video", async (c) => {
-  // importing file 
-  const file = Bun.file(videoPath)
+  // importing file
+  const file = Bun.file(videoPath);
 
   // 1. Check if video exists
   if (!file) {
     return c.text("Video not found", 404);
   }
   // defining range header for the video streaming
-  
+
   const filesize = await file.size;
   const rangeHeader = c.req.header("Range");
   // if don't have range header then we will send the whole video to the client
-  if(!rangeHeader) {
-    c.header('Content-Type', 'video/mp4');
-    c.header('Content-Length', filesize.toString());
-    c.header('Accept-Ranges', 'bytes');
+  if (!rangeHeader) {
+    c.header("Content-Type", "video/mp4");
+    c.header("Content-Length", filesize.toString());
+    c.header("Accept-Ranges", "bytes");
+    c.status(200);
     return stream(c, async (stream) => {
       await stream.pipe(file.stream());
     });
-
   }
   // Parsing Header Range:start-end
-  const [startStr, endStr] = rangeHeader.replace('bytes=','').split("-");
+  const [startStr, endStr] = rangeHeader.replace("bytes=", "").split("-");
   const start = parseInt(startStr, 10);
   const end = endStr ? parseInt(endStr, 10) : filesize - 1;
-  const chunkSize = (end - start) + 1;
+  const chunkSize = end - start + 1;
+  console.log(start);
+  console.log(end);
 
   // valiadting range
   if (start >= filesize || end >= filesize) {
     c.header("Content-Range", `bytes */${filesize}`);
     return c.text("Range Not Satisfiable", 416);
   }
-  c.header('Content-Type', 'video/mp4');
-  c.header('Content-Range', `bytes ${start}-${end}/${filesize}`);
-
-
-  c.header("Content-Type", "video/mp4"); 
+  c.header("Content-Type", "video/mp4");
+  c.header("Content-Range", `bytes ${start}-${end}/${filesize}`);
   c.header("Content-Length", file.size.toString());
   c.header("Accept-Ranges", "bytes");
-  c.header("Content-Range", String(chunkSize));
-
+  c.status(206);
   return stream(c, async (stream) => {
     // fetching the video from the local device
-    const chunk = file.slice(start, end + 1);
-    await stream.pipe(file.stream());
-
+    await stream.pipe(file.slice(start,end+1).stream());
+    console.log(start);
+    console.log(end);
   });
 });
+// mime type streaming which include all kind of streaming
+const MIME_TYPES = {
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm',
+  '.mkv':  'video/x-matroska',
+}
+app.get("/video/:filename",(c)=>{
+  const filename = c.req.param('filename');
+  const ext = "." + filename.split(".").pop().toLowerCase();
+  const mimeType = MIME_TYPES[ext];
+  if(!mimeType){
+    return c.text(`unsupported format: ${ext}`,415)
+  }
+  console.log(import.meta.dir);
+  console.log('Filename:',filename);
+  const file = Bun.file(`${import.meta.dir}/${filename}`)
+
+  if(!file){
+    return c.text('file not found',404)
+  }
+  const fileSize = file.size;
+  const rangeHeader = c.req.header('Range');
+  //
+  if(!rangeHeader){
+    c.header('Content-Type',mimeType);
+    c.header('Content-Length',fileSize.toString());
+    c.header('Accept-Ranges','bytes');
+    c.status(200);
+    return stream(c,async (stream)=>{
+      await stream.pipe(file.stream());
+    })
+  }
+  //
+  const [startStr,endStr] = rangeHeader.replace('bytes=','').split('-');
+  const start = parseInt(startStr,10);
+  const end = endStr ? parseInt(endStr,10) : fileSize-1;
+  const chunkSize = end-start+1;
+  if(start >= fileSize || end >= fileSize){
+    c.header('Content-Range',`bytes */${fileSize}`);
+    return c.text('Range Not Satisfiable',416)
+  }
+  c.header('Content-Type',mimeType);
+  c.header('Content-Length',chunkSize.toString());
+  c.header('Accept-Ranges','bytes');
+  c.header('Content-Range',`bytes ${start}-${end}/${fileSize}`);
+  c.status(206);
+  return stream(c,async (stream)=>{
+    await stream.pipe(file.slice(start,end+1).stream());
+  })
 
 
+
+}
+);
+app.get("/test/:filename", (c) => {
+  console.log(c.req.param("filename"));
+  return c.text("ok");
+});
 export default app;
