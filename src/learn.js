@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { stream } from "hono/streaming";
 import { join } from "node:path";
 import {logger} from "hono/logger";
+import {readdirSync} from "fs";
 //import {extname} from 'path';
 const app = new Hono();
 //const Videos = [];
@@ -29,14 +30,6 @@ app.post("/videosss", async (c) => {
   return c.json(newVideo);
 });
 // Reading data using streem
-app.get("/videos", (c) => {
-  return streamText(c, async (stream) => {
-    for (const video of Videos) {
-      await stream.writeln(JSON.stringify(video) + "\n");
-    }
-    await stream.end();
-  });
-});
 // Read by video id
 app.get("/videosss/:id", (c) => {
   const { id } = c.req.param();
@@ -186,8 +179,9 @@ app.get("/video/:filename",(c)=>{
   //
   if(!rangeHeader){
     c.header('Content-Type',mimeType);
-    c.header('Content-Length',fileSize.toString());
+   // c.header('Content-Length',fileSize.toString());
     c.header('Accept-Ranges','bytes');
+    c.header('Transfer-Encoding','chunked');
     c.status(200);
     return stream(c,async (stream)=>{
       await stream.pipe(file.stream());
@@ -215,8 +209,29 @@ app.get("/video/:filename",(c)=>{
 
 }
 );
-app.get("/test/:filename", (c) => {
-  console.log(c.req.param("filename"));
-  return c.text("ok");
+app.get("/videos", (c) => {
+  const files = readdirSync(join(import.meta.dir));
+  const videos = files
+  .filter(file=>{
+    const ext = '.'+file.split('.').pop().toLowerCase();
+    return MIME_TYPES[ext] && ext !== '.m3u8' && ext !== '.ts';
+  })
+  .map(file=>{
+          const ext = "." + file.split(".").pop().toLowerCase();
+          const bunFile = Bun.file(`${import.meta.dir}/${file}`);
+          return {
+            filename: file,
+            size: bunFile.size,
+            sizeInMB: (bunFile.size / (1024 * 1024)).toFixed(2) + " MB",
+            mimeType: MIME_TYPES[ext],
+            url: `/video/${file}`,
+          };
+
+  })
+  return c.json({
+    total: videos.length,
+    videos
+  });
 });
+
 export default app;
