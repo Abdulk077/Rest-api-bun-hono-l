@@ -4,6 +4,7 @@ import { stream } from "hono/streaming";
 import { join } from "node:path";
 import {logger} from "hono/logger";
 import {readdirSync} from "fs";
+import { readdir } from "fs/promises";
 //import {extname} from 'path';
 const app = new Hono();
 //const Videos = [];
@@ -209,8 +210,8 @@ app.get("/video/:filename",(c)=>{
 
 }
 );
-app.get("/videos", (c) => {
-  const files = readdirSync(join(import.meta.dir));
+app.get("/videos",async (c) => {
+  const files = await readdir(join(import.meta.dir));
   const videos = files
   .filter(file=>{
     const ext = '.'+file.split('.').pop().toLowerCase();
