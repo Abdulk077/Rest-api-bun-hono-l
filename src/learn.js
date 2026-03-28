@@ -205,9 +205,6 @@ app.get("/video/:filename",(c)=>{
   return stream(c,async (stream)=>{
     await stream.pipe(file.slice(start,end+1).stream());
   })
-
-
-
 }
 );
 app.get("/videos",async (c) => {
