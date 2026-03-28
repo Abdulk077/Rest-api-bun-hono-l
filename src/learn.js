@@ -207,6 +207,39 @@ app.get("/video/:filename",(c)=>{
   })
 }
 );
+// serve M3U8 PLAYLIST
+app.get("/hls/playlist.m3u8", (c) => {
+  const file = Bun.file(`${import.meta.dir}/hls/playlist.m3u8`);
+
+  if (!file.size) return c.text("playlist not found", 404);
+
+  // no caching — player always needs fresh playlist
+  c.header("Content-Type", "application/vnd.apple.mpegurl");
+  c.header("Cache-Control", "no-cache");
+
+  return stream(c, async (s) => {
+    await s.pipe(file.stream());
+  });
+});
+// serv ts segments
+app.get("/hls/:segment", (c) => {
+  const segment = c.req.param('segment');
+  // allow only .ts file
+  if(!segment.endsWith('.ts')){
+    return c.text('unsupported format',415)
+  }
+  const file = Bun.file(`${import.meta.dir}/hls/${segment}`);
+  if (!file.size) return c.text("segment not found", 404);
+
+  c.header("Content-Type", "video/mp2t");
+  c.header("Cache-Control", "public, max-age=3600");
+
+  return stream(c, async (s) => {
+    await s.pipe(file.stream());
+  });
+});
+  
+
 app.get("/videos",async (c) => {
   const files = await readdir(join(import.meta.dir));
   const videos = files
