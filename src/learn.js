@@ -265,4 +265,44 @@ app.get("/videos",async (c) => {
   });
 });
 
+// Test player endpoint
+app.get('/player', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>HLS Player</title>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+      </head>
+      <body style="background:#000;display:flex;justify-content:center;align-items:center;height:100vh;margin:0">
+        <video id="video" controls style="width:80%;max-width:900px"></video>
+
+        <script>
+          const video = document.getElementById('video')
+          const hlsUrl = '/hls/playlist.m3u8'
+
+          if (Hls.isSupported()) {
+            const hls = new Hls()
+            hls.loadSource(hlsUrl)
+            hls.attachMedia(video)
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              console.log('playlist loaded, starting playback')
+              video.play()
+            })
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              console.error('hls error:', data)
+            })
+
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Safari supports HLS natively
+            video.src = hlsUrl
+            video.play()
+          }
+        </script>
+      </body>
+    </html>
+  `)
+})
 export default app;
