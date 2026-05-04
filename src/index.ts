@@ -1,9 +1,15 @@
-import { Hono } from 'hono'
-const app = new Hono()
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
+import hlsRoutes from "./routes/hls";
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+const app = new Hono();
 
+app.use("*", logger());
+app.use("*", cors({ origin: "*" }));
 
-export default app
+app.route("/hls", hlsRoutes);
+
+app.get("/", (c) => c.json({ status: "ok" }));
+
+export default { port: 3000, fetch: app.fetch };

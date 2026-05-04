@@ -209,7 +209,7 @@ app.get("/video/:filename",(c)=>{
 );
 // serve M3U8 PLAYLIST
 app.get("/hls/playlist.m3u8", (c) => {
-  const file = Bun.file(`${import.meta.dir}/hls/playlist.m3u8`);
+  const file = Bun.file(`${import.meta.dir}/hls/720p/playlist.m3u8`);
 
   if (!file.size) return c.text("playlist not found", 404);
 
@@ -228,7 +228,7 @@ app.get("/hls/:segment", (c) => {
   if(!segment.endsWith('.ts')){
     return c.text('unsupported format',415)
   }
-  const file = Bun.file(`${import.meta.dir}/hls/${segment}`);
+  const file = Bun.file(`${import.meta.dir}/hls/720p/${segment}`);
   if (!file.size) return c.text("segment not found", 404);
 
   c.header("Content-Type", "video/mp2t");
@@ -279,7 +279,7 @@ app.get('/player', (c) => {
 
         <script>
           const video = document.getElementById('video')
-          const hlsUrl = '/hls/playlist.m3u8'
+          const hlsUrl = '/hls/720p/playlist.m3u8'
 
           if (Hls.isSupported()) {
             const hls = new Hls()
